@@ -1,0 +1,89 @@
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<p>Hello im a template</p>
+<br>
+{% if form %}
+<form id="ajax_form" method="post" enctype="multipart/form-data" action="{% url 'ajax_test:ajx' %}">
+    {% csrf_token %}
+    {{ form }}
+    <input id="btn_submit_form" type="submit" value="Submit">
+</form>
+{% endif %}
+<br>
+<div id="ajax_response_placeholder">
+    <div id="message placeholder"></div>
+    <table id='filelist_table'>
+        <thead>
+        <tr>
+            <th>id</th>
+            <th>filename</th>
+            <th>status</th>
+        </tr>
+    </thead>
+    <tbody id='table_rows'></tbody>
+    </table>
+</div>
+
+<script>
+    $('#ajax_form').submit(function(e){
+        e.preventDefault();
+        $form = $(this)
+        var formData = new FormData(this);
+        $.ajax({
+            url: "{% url 'ajax_test:ajx' %}",
+            type: 'POST',
+            data: formData,
+            success: function (response) {
+                $('#message placeholder').append(response["message"]);
+            },
+            cache: false,
+            contentType: false,
+            processData: false
+        });
+    });
+
+    (function worker() {
+        $.ajax({
+            url: "{% url 'ajax_test:get_filelist' %}", 
+            success: function(response) {
+                var filelist = JSON.parse(response['instance']);
+                n = filelist.length;
+                var table = document.getElementById('table_rows');
+                table.innerHTML='';
+
+                for (var i = 0; i < n; i++) {
+                    var status;
+                    switch (filelist[i]['fields']['status']) {
+                        case 1:
+                            status = 'Загружен';
+                            break;
+                        case 2:
+                        status = 'Обрабатывается';
+                            break;
+                        case 3:
+                            status = 'Обработан';
+                            break;
+                        case 4:
+                            status = 'Ошибка';
+                            break;
+                    };
+
+                    var new_row = table.insertRow(-1);
+                    var id_cell = new_row.insertCell(0);
+                    var filename_cell = new_row.insertCell(1);
+                    var status_cell = new_row.insertCell(2);
+
+                    var id_value = document.createTextNode(filelist[i]['pk']);
+                    id_cell.appendChild(id_value);
+                    var filename_value = document.createTextNode(filelist[i]['fields']['file']);
+                    filename_cell.appendChild(filename_value);
+                    var status_value = document.createTextNode(status);
+                    status_cell.appendChild(status_value);
+                };
+            },
+        complete: function() {
+            setTimeout(worker, 2000);
+        }
+        });
+    })();
+</script>
